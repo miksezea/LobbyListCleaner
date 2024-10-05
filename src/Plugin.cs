@@ -128,7 +128,6 @@ namespace LobbyListCleaner
         {
             Plugin.filteredLobbyNamesParsed = Plugin.filteredLobbyNamesParsed.AddToArray(lobbyName.text);
             Plugin.MyLogger.LogInfo(lobbyName.text + " added to block list");
-            Plugin.MyLogger.LogInfo("Block list: " + string.Join(", ", Plugin.filteredLobbyNamesParsed));
             // Plugin.MyConfig.Reload();
 
             // Update the lobby list
