@@ -8,4 +8,4 @@ Ever got tired of scrolling through the lobby list filled with foreign lobbies? 
 
 This is a simple mod that adds a "Block" button to each lobby in the lobby list. When you click the button, you filter the server list by the names of blocked lobbies. Closing the game removes blocked lobby names.
 
-Inspired by: https://github.com/1A3Dev/LC-LobbyImprovements
+Inspired by: [LobbyImprovements](https://github.com/1A3Dev/LC-LobbyImprovements)
