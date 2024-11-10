@@ -11,6 +11,11 @@ using UnityEngine;
 using UnityEngine.UI;
 using Object = UnityEngine.Object;
 
+// TODO List:
+// - Either turn into a config option or have temporary and permanent block lists
+// - Config option to choose if reload after each block
+// - Config option to choose if blocking by name or by Steam ID
+
 // Inspired by https://github.com/1A3Dev/LC-LobbyImprovements
 namespace LobbyListCleaner
 {
@@ -20,8 +25,8 @@ namespace LobbyListCleaner
         public static Plugin Instance { get; private set; }
         private readonly Harmony harmony = new(MyPluginInfo.PLUGIN_GUID);
         internal static ManualLogSource MyLogger { get; private set; }
-        internal static ConfigFile MyConfig { get; private set; }
         private static bool initialized;
+        internal static ConfigFile MyConfig { get; private set; }
         // public static ConfigEntry<string> filteredLobbyNames;
         public static string[]? filteredLobbyNamesParsed;
         public static string[]? activeFilter;
@@ -72,7 +77,7 @@ namespace LobbyListCleaner
     [HarmonyPatch]
     internal class Patches
     {
-        // Filter out lobbies with names in the block list
+        // Filter lobbylist by blocked names
         [HarmonyPatch(typeof(SteamLobbyManager), "loadLobbyListAndFilter")]
         [HarmonyPrefix]
         private static void Prefix(ref Lobby[] lobbyList)
@@ -84,7 +89,7 @@ namespace LobbyListCleaner
 
             lobbyList = lobbyList.Where(lobby =>
             {
-                string lobbyName = lobby.GetData("name");
+                string lobbyName = lobby.GetData("name").ToLower();
                 return !Plugin.filteredLobbyNamesParsed.Any(blockedName => lobbyName.Contains(blockedName));
             }).ToArray();
         }
@@ -98,7 +103,7 @@ namespace LobbyListCleaner
             {
                 yield return result.Current;
             }
-            var textLabels = new string[] { "Block", "Blocked!", "Invalid" };
+            var textLabels = new string[] { "Filter", "Success", "Invalid" };
 
             LobbySlot[] lobbySlots = UnityEngine.Object.FindObjectsOfType<LobbySlot>();
             foreach (LobbySlot lobbySlot in lobbySlots)
@@ -126,7 +131,7 @@ namespace LobbyListCleaner
 
         internal static void AddNameToBlockList(TextMeshProUGUI lobbyName)
         {
-            Plugin.filteredLobbyNamesParsed = Plugin.filteredLobbyNamesParsed.AddToArray(lobbyName.text);
+            Plugin.filteredLobbyNamesParsed = Plugin.filteredLobbyNamesParsed.AddToArray(lobbyName.text.ToLower());
             Plugin.MyLogger.LogInfo(lobbyName.text + " added to block list");
             // Plugin.MyConfig.Reload();
 
