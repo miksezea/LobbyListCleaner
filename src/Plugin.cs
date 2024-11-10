@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Linq;
 using System.Reflection;
@@ -22,13 +23,16 @@ namespace LobbyListCleaner
     [BepInPlugin(MyPluginInfo.PLUGIN_GUID, MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION)]
     public class Plugin : BaseUnityPlugin
     {
-        public static Plugin Instance { get; private set; }
+        public static Plugin? Instance { get; private set; }
         private readonly Harmony harmony = new(MyPluginInfo.PLUGIN_GUID);
-        internal static ManualLogSource MyLogger { get; private set; }
+        internal static ManualLogSource? MikseLogger { get; private set; }
         private static bool initialized;
-        internal static ConfigFile MyConfig { get; private set; }
+        internal static ConfigFile? MikseConfig { get; private set; }
+        public ConfigEntry<bool>? ReloadAfterEachBlock { get; private set; }
+        public ConfigEntry<bool>? BlockByNameOrSteamID { get; private set; }
         // public static ConfigEntry<string> filteredLobbyNames;
-        public static string[]? filteredLobbyNamesParsed;
+        // public static ConfigEntry<string> filteredSteamIDs;
+        public static string[]? blockedLobbyNames;
         public static string[]? activeFilter;
 
         private void Awake()
@@ -39,8 +43,12 @@ namespace LobbyListCleaner
             }
             initialized = true;
             Instance = this;
-            MyLogger = Logger;
-            MyConfig = Config;
+            MikseLogger = Logger;
+            MikseConfig = Config;
+
+            ReloadAfterEachBlock = Config.Bind("General", "Reload after filtering", true, "Reload the lobby list each time a lobby is added to the filter list.");
+
+            BlockByNameOrSteamID = Config.Bind("General", "Block by name or Steam ID", true, "Choose if you want to block lobbies by name or by Steam ID. true = name, false = Steam ID");
 
             // filteredLobbyNames = MyConfig.Bind("Lobby Names", "Filter", "", "Lobby names to filter out of the lobby list. Separate multiple names with a comma.");
             // filteredLobbyNames.SettingChanged += (sender, args) =>
@@ -82,7 +90,7 @@ namespace LobbyListCleaner
         [HarmonyPrefix]
         private static void Prefix(ref Lobby[] lobbyList)
         {
-            if (Plugin.filteredLobbyNamesParsed == null || Plugin.filteredLobbyNamesParsed.Length == 0)
+            if (Plugin.blockedLobbyNames == null || Plugin.blockedLobbyNames.Length == 0)
             {
                 return;
             }
@@ -90,7 +98,7 @@ namespace LobbyListCleaner
             lobbyList = lobbyList.Where(lobby =>
             {
                 string lobbyName = lobby.GetData("name").ToLower();
-                return !Plugin.filteredLobbyNamesParsed.Any(blockedName => lobbyName.Contains(blockedName));
+                return !Plugin.blockedLobbyNames.Any(blockedName => lobbyName.Contains(blockedName));
             }).ToArray();
         }
 
@@ -103,7 +111,7 @@ namespace LobbyListCleaner
             {
                 yield return result.Current;
             }
-            var textLabels = new string[] { "Filter", "Success", "Invalid" };
+            var textLabels = new string[] { "Block", "Success!", "Invalid" };
 
             LobbySlot[] lobbySlots = UnityEngine.Object.FindObjectsOfType<LobbySlot>();
             foreach (LobbySlot lobbySlot in lobbySlots)
@@ -131,15 +139,15 @@ namespace LobbyListCleaner
 
         internal static void AddNameToBlockList(TextMeshProUGUI lobbyName)
         {
-            Plugin.filteredLobbyNamesParsed = Plugin.filteredLobbyNamesParsed.AddToArray(lobbyName.text.ToLower());
-            Plugin.MyLogger.LogInfo(lobbyName.text + " added to block list");
+            Plugin.blockedLobbyNames = Plugin.blockedLobbyNames.AddToArray(lobbyName.text.ToLower());
+            Plugin.MikseLogger?.LogInfo(lobbyName.text + " added to block list");
             // Plugin.MyConfig.Reload();
 
             // Update the lobby list
             SteamLobbyManager lobbyManager = UnityEngine.Object.FindObjectOfType<SteamLobbyManager>();
             lobbyManager?.RefreshServerListButton();
 
-            Plugin.activeFilter = Plugin.filteredLobbyNamesParsed;
+            Plugin.activeFilter = Plugin.blockedLobbyNames;
         }
     }
 }
